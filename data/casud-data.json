@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "territoire": "CASUD",
+    "nom_complet": "Communauté d'Agglomération du Sud",
+    "communes": ["Saint-Joseph", "Saint-Philippe", "Le Tampon", "Entre-Deux", "Petite-Île"],
+    "population": 133164,
+    "date_maj": "2026-10-12"
+  },
+  "dechets": {"annee":2024,"omr":{"tonnage":34801,"evolution":"+13.78%"},"emr":{"tonnage":5188,"evolution":"+18.61%"},"vegetaux":{"tonnage":25683,"evolution":"+53.97%"},"encombrants":{"tonnage":15136,"evolution":"+38.61%"},"vhu":{"unites":763,"evolution":"+11.38%"},"passages_decheteries":{"total":105159,"evolution":"+6.71%"},"verre_bav":{"tonnage":2345,"evolution":"+36.57%"},"composteurs_distribues":1101},
+  "eau_potable": {"annee":2024,"population_desservie":133164,"abonnes":61639,"consommation_moyenne_m3":170.27,"densite_lineaire":54.4,"objectif_rendement":70},
+  "assainissement": {"annee":2024,"prix_m3_ttc":2.18,"usagers_anc":45142,"conformite_anc":"57%"},
+  "transport": {"annee":2023,"lignes":43,"arrets":2145,"clients_transportes":1134452,"validations":1330000,"evolution_validations":"+8.21%","km_parcourus":4120448,"vehicules":110,"etp":213,"recettes_commerciales_eur":1180525,"evolution_recettes":"+5%","population_5min_arret":"98%","menages_sans_vehicule":"25%"},
+  "finances": {"annee":2024,"depenses_fonctionnement_meur":83.1,"recettes_fonctionnement_meur":103.9,"excedent_fonctionnement_meur":20.8,"depenses_investissement_meur":71.4,"recettes_investissement_meur":69.6,"subventions_nouvelles_meur":3.9},
+  "habitat": {"nouveaux_logements":70000,"taux_vacance":"6.3%","habitats_precaires":"10%"},
+  "energie": {"geothermie_mw":20,"geothermie_foyers":40000,"methanisation_t_an":30000,"methanisation_foyers":5000}
+}

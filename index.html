@@ -1,0 +1,2301 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🇷🇪 CASUD Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg-0:#050810;--bg-1:#0a0f1a;--bg-2:#0f1624;--bg-3:#151f30;--border:#1c2940;--text-0:#e6f1ff;--text-1:#8ba3c7;--text-2:#4a5f7f;--cyan:#00e5ff;--green:#00ff88;--amber:#ffb800;--red:#ff3b3b;--purple:#a855f7;--font-mono:'JetBrains Mono',monospace;--font-sans:'Inter',sans-serif}
+body{font-family:var(--font-sans);background:var(--bg-0);color:var(--text-0);font-size:13px;line-height:1.5}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg-1)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.topbar{min-height:54px;background:linear-gradient(180deg,#0a0f1a,#050810);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:100}
+.brand{font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--cyan);display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.brand .sub{color:var(--text-2);font-weight:400;font-size:11px}
+.topbar-right{margin-left:auto;display:flex;gap:12px;font-family:var(--font-mono);font-size:11px;align-items:center;flex-wrap:wrap}
+.stat{display:flex;gap:5px;color:var(--text-1);align-items:center}
+.stat .val{color:var(--cyan);font-weight:700}
+.stat .val.green{color:var(--green)}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;width:100%;padding-top:4px}
+.tab{background:transparent;border:none;color:var(--text-1);font-family:var(--font-mono);font-size:11px;font-weight:600;padding:8px 12px;border-radius:4px;cursor:pointer;transition:all .15s}
+.tab:hover{background:var(--bg-2);color:var(--text-0)}
+.tab.active{background:var(--bg-3);color:var(--cyan);box-shadow:inset 0 -2px 0 var(--cyan)}
+.app{display:grid;grid-template-columns:280px 1fr 300px;height:calc(100vh - 100px);overflow:hidden}
+@media(max-width:1200px){.app{grid-template-columns:230px 1fr 260px}}
+@media(max-width:900px){.app{display:flex;flex-direction:column;height:auto}.sidebar,.center,.right{width:100%}}
+.sidebar{background:var(--bg-1);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sb-head{padding:14px 16px;border-bottom:1px solid var(--border);background:var(--bg-2)}
+.sb-title{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:1.2px;display:flex;align-items:center;gap:8px}
+.sb-title::before{content:'';width:3px;height:12px;background:var(--green)}
+.sb-count{font-family:var(--font-mono);font-size:11px;color:var(--text-2);margin-top:6px}
+.sb-list{flex:1;overflow-y:auto;padding:8px}
+.sb-item{background:var(--bg-2);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:6px;padding:10px 12px;margin-bottom:5px;cursor:pointer;transition:all .15s}
+.sb-item:hover{border-color:var(--cyan);border-left-color:var(--cyan);background:var(--bg-3);transform:translateX(2px)}
+.sb-item.active{border-color:var(--cyan);border-left-color:var(--cyan);background:var(--bg-3)}
+.sb-item-h{display:flex;align-items:center;gap:8px}
+.sb-item-icon{font-size:16px}
+.sb-item-name{font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text-0);flex:1}
+.sb-item-meta{font-family:var(--font-mono);font-size:10px;color:var(--text-2);margin-top:3px}
+.sb-item-meta .count{color:var(--cyan);font-weight:700}
+.center{background:var(--bg-0);display:flex;flex-direction:column;overflow:hidden}
+.work-bar{padding:12px 16px;background:var(--bg-1);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.work-title{font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--text-0);display:flex;align-items:center;gap:8px}
+.work-title .ic{font-size:20px}
+.work-sub{font-family:var(--font-mono);font-size:10.5px;color:var(--text-2);margin-top:4px}
+.wb-btn{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:7px 12px;border-radius:5px;cursor:pointer;background:var(--cyan);color:var(--bg-0);border:none}
+.wb-btn:hover{background:#fff}
+#dashboard{flex:1;overflow-y:auto;padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:16px;align-content:start}
+@media(max-width:1200px){#dashboard{grid-template-columns:1fr}}
+@media(max-width:600px){#dashboard{grid-template-columns:1fr;padding:10px}}
+.card{background:var(--bg-1);border:1px solid var(--border);border-radius:8px;padding:18px}
+.card h3{font-family:var(--font-mono);font-size:11.5px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--border);gap:8px}
+.card h3 .source{font-size:9.5px;color:var(--text-2);font-weight:500;text-transform:none}
+.kpi{font-family:var(--font-mono);font-size:36px;font-weight:800;color:var(--cyan);line-height:1;letter-spacing:-1.5px;text-shadow:0 0 24px rgba(0,229,255,.45)}
+.kpi-evolution{font-family:var(--font-mono);font-size:11px;color:var(--green);margin-top:6px}
+.kpi-evolution.down{color:var(--red)}
+.overview-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.overview-card{background:var(--bg-1);border:1px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.overview-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--green);transition:all .2s}
+.overview-card:hover{border-color:var(--cyan);transform:translateY(-3px);box-shadow:0 6px 28px rgba(0,229,255,.18)}
+.overview-card:hover::before{background:var(--cyan);box-shadow:0 0 14px var(--cyan)}
+.overview-card .ico{font-size:28px;margin-bottom:8px;display:block}
+.overview-card .val{font-family:var(--font-mono);font-size:28px;font-weight:800;color:var(--cyan);line-height:1;margin-bottom:5px}
+.overview-card .lbl{font-family:var(--font-mono);font-size:10.5px;color:var(--text-1);text-transform:uppercase;letter-spacing:.4px}
+table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:12px}
+th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--border)}
+th{color:var(--text-2);font-weight:700;font-size:10px;text-transform:uppercase;background:var(--bg-2)}
+td{color:var(--text-0)}
+.badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700}
+.badge.green{background:rgba(0,255,136,.15);color:var(--green)}
+.badge.amber{background:rgba(255,184,0,.15);color:var(--amber)}
+.badge.red{background:rgba(255,59,59,.15);color:var(--red)}
+.badge.cyan{background:rgba(0,229,255,.15);color:var(--cyan)}
+.right{background:var(--bg-1);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.rs-head{padding:12px 14px;border-bottom:1px solid var(--border);background:var(--bg-2);font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--cyan);letter-spacing:1.2px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.rs-head::before{content:'';width:3px;height:12px;background:var(--green)}
+.rs-body{flex:1;overflow-y:auto;padding:12px}
+.intel-panel{background:var(--bg-2);border:1px solid var(--border);border-radius:6px;margin-bottom:10px;overflow:hidden}
+.intel-head{padding:8px 12px;background:var(--bg-3);border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:10.5px;font-weight:700;color:var(--cyan);letter-spacing:.8px;text-transform:uppercase}
+.intel-body{padding:10px}
+.intel-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:11px;gap:8px}
+.intel-row:last-child{border-bottom:none}
+.intel-row .k{color:var(--text-1);flex:1}
+.intel-row .v{color:var(--text-0);font-weight:700}
+.intel-row .v.cyan{color:var(--cyan)}
+.intel-row .v.green{color:var(--green)}
+.loader{grid-column:1/-1;text-align:center;padding:50px 20px;color:var(--text-1);font-family:var(--font-mono);font-size:12px}
+.loader .spin{width:36px;height:36px;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:sp .8s linear infinite;margin:0 auto 14px}
+@keyframes sp{to{transform:rotate(360deg)}}
+canvas{max-height:300px}
+.map{height:420px;border-radius:6px;overflow:hidden;border:1px solid var(--border);background:var(--bg-2)}
+
+.invest-filters{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:12px;
+  padding:14px 16px;background:var(--bg-1);border:1px solid var(--border);
+  border-radius:8px;margin-bottom:8px;align-items:center}
+.invest-filters label{display:flex;align-items:center;gap:6px;
+  font-family:var(--font-mono);font-size:11px;color:var(--text-1)}
+.invest-filters select{
+  background:var(--bg-2);border:1px solid var(--border);
+  color:var(--text-0);padding:6px 10px;border-radius:5px;
+  font-family:var(--font-mono);font-size:11px}
+.invest-filters select:focus{outline:none;border-color:var(--cyan)}
+.invest-filters .count{margin-left:auto;font-family:var(--font-mono);
+  font-size:11px;color:var(--cyan);font-weight:700}
+.btn-export{background:var(--cyan);color:var(--bg-0);border:none;
+  padding:7px 14px;border-radius:5px;font-family:var(--font-mono);
+  font-size:11px;font-weight:700;cursor:pointer}
+.btn-export:hover{background:#fff}
+
+/* graph-fix-applied */
+#dashboard > .card:has(canvas){
+  min-height: 400px;
+  max-height: 420px;
+  overflow: hidden;
+}
+#dashboard > .card canvas{
+  display: block !important;
+  width: 100% !important;
+  height: 300px !important;
+  max-height: 300px !important;
+  min-height: 300px !important;
+  position: relative !important;
+  z-index: 1;
+}
+
+/* transport-map-css */
+.map{height:520px;border-radius:6px;overflow:hidden;border:1px solid var(--border);background:var(--bg-2)}
+
+/* table-fix-applied */
+#dashboard > .card{
+  overflow: hidden;
+  min-height: 0;
+}
+#dashboard > .card table{
+  width: 100%;
+  display: block;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 600px;
+  white-space: nowrap;
+}
+#dashboard > .card table thead{
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg-2);
+}
+#dashboard > .card table th,
+#dashboard > .card table td{
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#dashboard > .card table tbody tr:hover td{
+  background: rgba(0,229,255,0.05);
+}
+
+/* Améliorer la grille : cartes plus larges pour les tableaux */
+#dashboard > .card.wide{
+  grid-column: span 2;
+}
+#dashboard > .card.full{
+  grid-column: 1 / -1;
+}
+
+/* Scrollbar visible */
+#dashboard > .card table::-webkit-scrollbar{width:10px;height:10px}
+#dashboard > .card table::-webkit-scrollbar-track{background:var(--bg-1)}
+#dashboard > .card table::-webkit-scrollbar-thumb{
+  background:var(--cyan-dim);
+  border-radius:5px;
+  border:2px solid var(--bg-1);
+}
+#dashboard > .card table::-webkit-scrollbar-thumb:hover{background:var(--cyan)}
+
+#dashboard > .card:has(table){
+  min-height: 400px;
+  max-height: 520px;
+}
+
+/* table-final-applied */
+
+/* design-polish-applied */
+
+/* === ANIMATIONS D'ENTRÉE === */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(0, 229, 255, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(0, 229, 255, 0.6); }
+}
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+/* === CARTES === */
+#dashboard > .card,
+#dashboard > .overview-grid > .overview-card {
+  animation: fadeInUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+#dashboard > .card:nth-child(1) { animation-delay: 0ms; }
+#dashboard > .card:nth-child(2) { animation-delay: 50ms; }
+#dashboard > .card:nth-child(3) { animation-delay: 100ms; }
+#dashboard > .card:nth-child(4) { animation-delay: 150ms; }
+#dashboard > .card:nth-child(5) { animation-delay: 200ms; }
+#dashboard > .card:nth-child(6) { animation-delay: 250ms; }
+#dashboard > .card:nth-child(7) { animation-delay: 300ms; }
+#dashboard > .card:nth-child(8) { animation-delay: 350ms; }
+#dashboard > .card:nth-child(9) { animation-delay: 400ms; }
+#dashboard > .card:nth-child(n+10) { animation-delay: 450ms; }
+
+/* === HOVER CARDS === */
+#dashboard > .card {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.3s ease,
+              border-color 0.3s ease;
+}
+#dashboard > .card:hover {
+  transform: translateY(-4px);
+  border-color: var(--cyan);
+  box-shadow: 0 12px 40px rgba(0, 229, 255, 0.15),
+              0 0 0 1px rgba(0, 229, 255, 0.1);
+}
+
+/* === KPI NÉON === */
+.kpi {
+  transition: all 0.3s ease;
+  position: relative;
+}
+#dashboard > .card:hover .kpi {
+  text-shadow: 0 0 30px rgba(0, 229, 255, 0.8),
+               0 0 60px rgba(0, 229, 255, 0.4);
+  transform: scale(1.02);
+}
+
+/* === TRANSITIONS ONGLETS === */
+.subtab {
+  position: relative;
+  overflow: hidden;
+}
+.subtab::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 0; height: 0;
+  background: radial-gradient(circle, rgba(0,229,255,0.3) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+  border-radius: 50%;
+}
+.subtab:hover::before {
+  width: 300px; height: 300px;
+}
+.subtab.active {
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.4),
+              inset 0 0 20px rgba(0, 229, 255, 0.1);
+}
+
+/* === SIDEBAR ITEMS === */
+.sb-item {
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sb-item:hover {
+  transform: translateX(6px);
+  box-shadow: -3px 0 0 var(--cyan),
+              0 4px 12px rgba(0, 229, 255, 0.1);
+}
+.sb-item.active {
+  box-shadow: -3px 0 0 var(--cyan),
+              0 0 20px rgba(0, 229, 255, 0.15);
+}
+
+/* === TABS TOPBAR === */
+.tab {
+  position: relative;
+  transition: all 0.25s ease;
+}
+.tab::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%;
+  width: 0; height: 2px;
+  background: var(--cyan);
+  transition: all 0.25s ease;
+  transform: translateX(-50%);
+}
+.tab:hover::after {
+  width: 60%;
+}
+.tab.active::after {
+  width: 100%;
+  box-shadow: 0 0 10px var(--cyan);
+}
+
+/* === BOUTONS === */
+.wb-btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.wb-btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 0.5s ease;
+}
+.wb-btn:hover::before {
+  left: 100%;
+}
+.wb-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 229, 255, 0.3);
+}
+
+/* === BADGES PULSANT === */
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+.badge.live,
+.dot {
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+/* === LOADER ÉLÉGANT === */
+.loader {
+  animation: fadeIn 0.4s ease;
+}
+.loader .spin {
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
+  animation: sp 0.8s linear infinite,
+             pulse-glow 2s ease-in-out infinite;
+}
+
+/* === TABLEAUX === */
+#dashboard > .card table tbody tr {
+  transition: all 0.15s ease;
+}
+#dashboard > .card table tbody tr:hover {
+  background: rgba(0, 229, 255, 0.08);
+  transform: scale(1.005);
+}
+#dashboard > .card table tbody tr:hover td {
+  color: var(--cyan);
+}
+
+/* === SCROLLBARS === */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-1);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--cyan-dim), var(--cyan));
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan);
+}
+
+/* === PANELS INTELLIGENCE === */
+.intel-panel {
+  transition: all 0.3s ease;
+}
+.intel-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  border-color: var(--cyan-dim);
+}
+
+/* === GLASSMORPHISM HEADER === */
+.topbar {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* === GLOW SUR LE KPI ACTIF === */
+.kpi {
+  font-family: var(--font-mono);
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--cyan);
+  line-height: 1;
+  letter-spacing: -1.5px;
+  text-shadow: 0 0 24px rgba(0, 229, 255, 0.45);
+  display: block;
+  min-height: 40px;
+}
+
+/* === ANIMATION FOND === */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background:
+    radial-gradient(circle at 20% 50%, rgba(0, 229, 255, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* === FOCUS VISIBLE === */
+*:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* === SÉLECTION TEXTE === */
+::selection {
+  background: rgba(0, 229, 255, 0.3);
+  color: var(--text-0);
+}
+/* habitat-v2-applied */
+/* habitat-v5-applied */
+
+/* tables-lisibles-applied */
+
+/* Améliorer la lisibilité de TOUS les tableaux */
+#dashboard > .card table{
+  font-size: 13px !important;
+  line-height: 1.5;
+}
+
+#dashboard > .card table thead th{
+  font-size: 11px !important;
+  padding: 12px 14px !important;
+  color: var(--cyan) !important;
+  background: var(--bg-3) !important;
+  border-bottom: 2px solid var(--cyan-dim) !important;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+#dashboard > .card table tbody td{
+  font-size: 12.5px !important;
+  padding: 11px 14px !important;
+  color: var(--text-0) !important;
+  border-bottom: 1px solid var(--border) !important;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#dashboard > .card table tbody tr:hover td{
+  background: rgba(0, 229, 255, 0.08) !important;
+  color: var(--cyan) !important;
+}
+
+/* Alterner les lignes pour meilleure lecture */
+#dashboard > .card table tbody tr:nth-child(even) td{
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Colonnes numériques alignées à droite */
+#dashboard > .card table tbody td:last-child,
+#dashboard > .card table tbody td:nth-last-child(2){
+  text-align: right;
+  font-weight: 700;
+}
+
+/* Hauteur max et scroll */
+#dashboard > .card table{
+  display: block;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 550px;
+}
+
+/* Scrollbar visible */
+#dashboard > .card table::-webkit-scrollbar{
+  width: 10px;
+  height: 10px;
+}
+#dashboard > .card table::-webkit-scrollbar-track{
+  background: var(--bg-1);
+  border-radius: 5px;
+}
+#dashboard > .card table::-webkit-scrollbar-thumb{
+  background: var(--cyan-dim);
+  border-radius: 5px;
+  border: 2px solid var(--bg-1);
+}
+#dashboard > .card table::-webkit-scrollbar-thumb:hover{
+  background: var(--cyan);
+}
+
+/* Tableaux larges (> 5 colonnes) en pleine largeur */
+#dashboard > .card.full table{
+  font-size: 13px !important;
+}
+
+/* Améliorer le contraste sur mobile */
+@media(max-width:900px){
+  #dashboard > .card table{
+    font-size: 11px !important;
+  }
+  #dashboard > .card table th,
+  #dashboard > .card table td{
+    padding: 8px 10px !important;
+  }
+}
+
+/* kpi-fix-applied */
+.kpi{
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  font-family: var(--font-mono) !important;
+  font-size: 36px !important;
+  font-weight: 800 !important;
+  color: var(--cyan) !important;
+  line-height: 1 !important;
+  letter-spacing: -1.5px !important;
+  text-shadow: 0 0 24px rgba(0,229,255,0.45) !important;
+  min-height: 40px !important;
+  position: relative !important;
+  z-index: 5 !important;
+  background: transparent !important;
+  -webkit-text-fill-color: var(--cyan) !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+}
+
+/* Au cas où le dégradé masquerait le texte */
+#dashboard > .card .kpi{
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: var(--cyan) !important;
+  color: var(--cyan) !important;
+}
+
+/* Les évolutions aussi */
+.kpi-evolution{
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: var(--green) !important;
+}
+
+/* kpi-final-applied */
+
+/* Forcer toutes les cartes à une hauteur minimum */
+#dashboard > .card {
+  min-height: 130px !important;
+  height: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  padding: 20px !important;
+}
+
+/* Cartes avec canvas : plus grandes */
+#dashboard > .card:has(canvas) {
+  min-height: 420px !important;
+  max-height: 420px !important;
+}
+
+/* Cartes avec tableau : plus grandes */
+#dashboard > .card:has(table) {
+  min-height: 450px !important;
+  max-height: 550px !important;
+}
+
+/* Le KPI doit être bien visible */
+#dashboard > .card .kpi {
+  margin-top: 10px !important;
+  margin-bottom: 5px !important;
+}
+
+/* En-tête de carte */
+#dashboard > .card h3 {
+  margin-bottom: 12px !important;
+  flex-shrink: 0 !important;
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="dot"></span>
+    CASUD MONITOR
+    <span class="sub">/ Communauté d'Agglomération du Sud</span>
+  </div>
+  <div class="topbar-right">
+    <div class="stat"><span>MODULES</span><span class="val green">8</span></div>
+    <div class="stat"><span>COMMUNES</span><span class="val">5</span></div>
+    <div class="stat"><span>HABITANTS</span><span class="val">133 164</span></div>
+    <div class="stat"><span>⏱</span><span class="val" id="tbUpdate">—</span></div>
+  </div>
+  <div class="tabs" id="tabs"></div>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-head">
+      <div class="sb-title">◆ MODULES CASUD</div>
+      <div class="sb-count" id="sbCount">8 modules · 5 communes</div>
+    </div>
+    <div class="sb-list" id="sbList"></div>
+  </aside>
+
+  <main class="center">
+    <div class="work-bar">
+      <div>
+        <div class="work-title"><span class="ic" id="activeIcon">📊</span><span id="activeName">Vue d'ensemble</span></div>
+        <div class="work-sub" id="activeSub">5 communes · 133 164 habitants</div>
+      </div>
+      <div><button class="wb-btn" id="refreshBtn">🔄 Actualiser</button></div>
+    </div>
+    <main id="dashboard">
+      <div class="loader"><div class="spin"></div>Chargement du dashboard CASUD…</div>
+    </main>
+  </main>
+
+  <aside class="right">
+    <div class="rs-head">◆ INTELLIGENCE</div>
+    <div class="rs-body">
+      <div class="intel-panel">
+        <div class="intel-head">📊 MODULE ACTIF</div>
+        <div class="intel-body">
+          <div class="intel-row"><span class="k">Module</span><span class="v cyan" id="ivName">—</span></div>
+          <div class="intel-row"><span class="k">Statut</span><span class="v green">● LIVE</span></div>
+        </div>
+      </div>
+      <div class="intel-panel">
+        <div class="intel-head">🏛️ TERRITOIRE</div>
+        <div class="intel-body">
+          <div class="intel-row"><span class="k">Communes</span><span class="v">5</span></div>
+          <div class="intel-row"><span class="k">Population</span><span class="v cyan">133 164</span></div>
+          <div class="intel-row"><span class="k">Abonnés eau</span><span class="v">61 639</span></div>
+          <div class="intel-row"><span class="k">Usagers ANC</span><span class="v">45 142</span></div>
+        </div>
+      </div>
+      <div class="intel-panel">
+        <div class="intel-head">⚙️ SYSTÈME</div>
+        <div class="intel-body">
+          <div class="intel-row"><span class="k">Source</span><span class="v">casud.re</span></div>
+          <div class="intel-row"><span class="k">Format</span><span class="v cyan">JSON statique</span></div>
+          <div class="intel-row"><span class="k">MAJ</span><span class="v green" id="sysUpdate">—</span></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+let DATA = null;
+const CHARTS = {};
+window.CHARTS = CHARTS;
+const DASH = () => document.getElementById('dashboard');
+
+const ICONS = {overview:'📊',alertes:'🚨',transport:'🚌',dechets:'🗑️',eau:'💧',habitat:'🏘️',energie:'⚡',finances:'💰',investissements:'🏗️',about:'ℹ️'};
+const LABELS = {overview:"Vue d'ensemble",alertes:'Alertes',transport:'Transport',dechets:'Déchets',eau:'Eau & Assainissement',habitat:'Habitat',energie:'Énergie',finances:'Finances',investissements:'Investissements',about:'À propos'};
+
+function renderKPI(c, {value, label, evolution, source}){
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `<h3>${label}${source ? `<span class="source">${source}</span>` : ''}</h3><div class="kpi">${value}</div>${evolution ? `<div class="kpi-evolution ${evolution.startsWith('-') ? 'down' : ''}">${evolution}</div>` : ''}`;
+  c.appendChild(card);
+}
+
+function renderCard(c, title, html, source){
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `<h3>${title}${source ? `<span class="source">${source}</span>` : ''}</h3>${html}`;
+  c.appendChild(card);
+  return card;
+}
+
+function renderChart(c, title, type, data, source){
+  const card = renderCard(c, title, '<canvas></canvas>', source);
+  const canvas = card.querySelector('canvas');
+
+  // Détruire TOUTE instance Chart.js existante sur ce canvas
+  const existing = Chart.getChart(canvas);
+  if (existing) {
+    try { existing.destroy(); } catch(e){}
+  }
+  if (CHARTS[title]) {
+    try { CHARTS[title].destroy(); } catch(e){}
+    delete CHARTS[title];
+  }
+
+  CHARTS[title] = new Chart(canvas, {
+    type, data,
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: '#8ba3c7', font: { size: 11, family: 'JetBrains Mono' } } } },
+      scales: (type === 'doughnut' || type === 'pie') ? {} : {
+        x: { ticks: { color: '#8ba3c7', font: { size: 10 } }, grid: { color: '#1c2940' } },
+        y: { ticks: { color: '#8ba3c7', font: { size: 10 } }, grid: { color: '#1c2940' } }
+      }
+    }
+  });
+}
+
+function renderTable(c, title, rows, cols, source){
+  // Si plus de 5 colonnes, prendre toute la largeur
+  const isWide = cols.length > 5;
+
+  let html = '<table><thead><tr>';
+  cols.forEach(col => html += `<th>${col.label}</th>`);
+  html += '</tr></thead><tbody>';
+  rows.forEach(r => {
+    html += '<tr>';
+    cols.forEach(col => html += `<td title="${String(r[col.key] ?? '').replace(/"/g, '&quot;')}">${r[col.key] ?? '—'}</td>`);
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+
+  // Créer la card
+  const card = document.createElement('div');
+  card.className = 'card' + (isWide ? ' full' : '');
+  card.innerHTML = `<h3>${title}${source ? `<span class="source">${source}</span>` : ''}</h3>${html}`;
+  c.appendChild(card);
+  return card;
+}
+
+function renderMap(c, title, points, source){
+  const card = renderCard(c, title, '<div class="map"></div>', source);
+  const mapDiv = card.querySelector('.map');
+  const map = L.map(mapDiv).setView([-21.15, 55.5], 10);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors', maxZoom: 19
+  }).addTo(map);
+  const markers = L.featureGroup();
+  points.forEach(p => {
+    const lat = p.stop_lat || p.latitude || p.lat;
+    const lng = p.stop_lon || p.longitude || p.lon;
+    if (!lat || !lng) return;
+    const label = p.stop_name || p.nom || p.name || 'Point';
+    L.marker([+lat, +lng]).bindPopup(`<strong>${label}</strong>`).addTo(markers);
+  });
+  markers.addTo(map);
+  if (markers.getLayers().length) {
+    try { map.fitBounds(markers.getBounds().pad(0.1)); } catch(e){}
+  }
+  setTimeout(() => map.invalidateSize(), 100);
+  return map;
+}
+
+/* ============ MODULES ============ */
+
+async function moduleOverview(c){
+  renderKPI(c, { value: '133 164', label: 'Population desservie', source: 'CASUD' });
+  renderKPI(c, { value: '5', label: 'Communes', source: 'CASUD' });
+  renderKPI(c, { value: '61 639', label: 'Abonnés eau', source: 'RPQS 2024' });
+  renderKPI(c, { value: '1,13 M', label: 'Clients transportés', evolution: '+8,21%', source: 'RAD 2023' });
+  renderKPI(c, { value: '105 159', label: 'Passages déchèteries', evolution: '+6,71%', source: 'RPQS 2024' });
+  renderKPI(c, { value: '20,8 M€', label: 'Excédent fonctionnement', source: 'Budget 2024' });
+
+  if (DATA && DATA.dechets){
+    const d = DATA.dechets;
+    renderChart(c, 'Déchets 2024 — Tonnages (t)', 'bar', {
+      labels: ['OMR','EMR','Végétaux','Encombrants','Verre BAV'],
+      datasets: [{
+        label: 'Tonnage (t)',
+        data: [d.omr.tonnage, d.emr.tonnage, d.vegetaux.tonnage, d.encombrants.tonnage, d.verre_bav.tonnage],
+        backgroundColor: ['#00e5ff','#00ff88','#ffb800','#a855f7','#ff3b3b']
+      }]
+    }, 'RPQS 2024');
+  }
+}
+
+async function moduleTransport(c){
+  container = c;
+  container.innerHTML = `
+    <div class="subtabs" id="transport-subtabs">
+      <button class="subtab active" data-subtab="global">📊 Vue globale</button>
+      <button class="subtab" data-subtab="arrets">🚌 Arrêts CarSud</button>
+      <button class="subtab" data-subtab="lignes">🛣️ Lignes</button>
+      <button class="subtab" data-subtab="carte">🗺️ Carte réseau</button>
+    </div>
+  `;
+  const tabs = container.querySelectorAll('#transport-subtabs .subtab');
+  tabs.forEach(t => {
+    t.addEventListener('click', () => {
+      tabs.forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      renderTransportTab(container, t.dataset.subtab);
+    });
+  });
+  renderTransportTab(container, 'global');
+}
+
+async function renderTransportTab(c, tab){
+  c.querySelectorAll(':scope > *:not(#transport-subtabs)').forEach(el => el.remove());
+
+  if (tab === 'global')   await transportGlobal(c);
+  if (tab === 'arrets')   await transportArrets(c);
+  if (tab === 'lignes')   await transportLignes(c);
+  if (tab === 'carte')    await transportCarte(c);
+}
+
+async function transportGlobal(c){
+  try {
+    const stats = await fetch('data/carsud-stats.json').then(r => r.json());
+    renderKPI(c, { value: stats.nb_lignes, label: 'Lignes CarSud', source: 'GTFS' });
+    renderKPI(c, { value: stats.nb_arrets.toLocaleString('fr-FR'), label: 'Arrêts', source: 'GTFS' });
+    renderKPI(c, { value: stats.nb_trajets.toLocaleString('fr-FR'), label: 'Trajets', source: 'GTFS' });
+    renderKPI(c, { value: stats.nb_traces, label: 'Tracés géographiques', source: 'GTFS' });
+  } catch(e){
+    console.warn('Stats non chargées', e);
+  }
+
+  // KPI RAD 2023
+  if (DATA && DATA.transport){
+    const t = DATA.transport;
+    renderKPI(c, { value: (t.validations/1e6).toFixed(2) + ' M', label: 'Validations 2023', evolution: t.evolution_validations, source: 'RAD 2023' });
+    renderKPI(c, { value: (t.km_parcourus/1e6).toFixed(2) + ' M km', label: 'Km parcourus', source: 'RAD 2023' });
+    renderKPI(c, { value: t.vehicules, label: 'Véhicules', source: 'RAD 2023' });
+    renderKPI(c, { value: t.etp, label: 'ETP', source: 'RAD 2023' });
+
+    renderChart(c, 'Fréquentation CarSud', 'bar', {
+      labels: ['2022', '2023'],
+      datasets: [{ label: 'Validations', data: [1229000, 1330000], backgroundColor: ['#8ba3c7', '#00e5ff'] }]
+    }, 'RAD 2023');
+
+    renderCard(c, 'Indicateurs clés', `
+      <table>
+        <tr><th>Indicateur</th><th>Valeur</th></tr>
+        <tr><td>Population à -5 min d'un arrêt</td><td><strong style="color:var(--green)">${t.population_5min_arret}</strong></td></tr>
+        <tr><td>Ménages sans véhicule</td><td><strong style="color:var(--amber)">${t.menages_sans_vehicule}</strong></td></tr>
+        <tr><td>Recettes commerciales</td><td><strong>${t.recettes_commerciales_eur.toLocaleString('fr-FR')} €</strong></td></tr>
+      </table>
+    `, 'RAD 2023');
+  }
+}
+
+async function transportArrets(c){
+  try {
+    const stops = await fetch('data/carsud-stops.json').then(r => r.json());
+    renderKPI(c, { value: stops.length.toLocaleString('fr-FR'), label: 'Arrêts CarSud', source: 'GTFS' });
+
+    // Top arrêts par nom (regroupement)
+    const parNom = {};
+    stops.forEach(s => {
+      const n = s.nom || 'Inconnu';
+      parNom[n] = (parNom[n] || 0) + 1;
+    });
+    const sortedN = Object.entries(parNom).sort((a,b) => b[1] - a[1]).slice(0, 10);
+    if (sortedN.length > 1){
+      renderChart(c, 'Top 10 arrêts (par variantes)', 'bar', {
+        labels: sortedN.map(n => n[0].substring(0, 30)),
+        datasets: [{ label: 'Variantes', data: sortedN.map(n => n[1]), backgroundColor: '#00e5ff' }]
+      }, 'GTFS');
+    }
+
+    // Carte
+    renderStopsMap(c, 'Carte des arrêts CarSud', stops);
+  } catch(e){
+    c.innerHTML += `<div class="error">Erreur arrêts : ${e.message}</div>`;
+  }
+}
+
+async function transportLignes(c){
+  try {
+    const routes = await fetch('data/carsud-routes.json').then(r => r.json());
+    renderKPI(c, { value: routes.length, label: 'Lignes CarSud', source: 'GTFS' });
+
+    // Top lignes par nb trajets
+    const sorted = [...routes].sort((a,b) => b.nb_trajets - a.nb_trajets).slice(0, 15);
+    if (sorted.length > 1){
+      renderChart(c, 'Top 15 lignes (par nb trajets)', 'bar', {
+        labels: sorted.map(r => r.code || r.id),
+        datasets: [{ label: 'Trajets', data: sorted.map(r => r.nb_trajets), backgroundColor: '#00ff88' }]
+      }, 'GTFS');
+    }
+
+    // Tableau
+    renderTable(c, 'Lignes CarSud', routes.map(r => ({
+      code: r.code || '—',
+      nom: (r.nom || '—').substring(0, 60),
+      trajets: r.nb_trajets,
+      id: r.id
+    })), [
+      { key: 'code', label: 'Code' },
+      { key: 'nom', label: 'Nom' },
+      { key: 'trajets', label: 'Nb trajets' },
+      { key: 'id', label: 'ID' }
+    ], 'GTFS');
+  } catch(e){
+    c.innerHTML += `<div class="error">Erreur lignes : ${e.message}</div>`;
+  }
+}
+
+async function transportCarte(c){
+  try {
+    const stops = await fetch('data/carsud-stops.json').then(r => r.json());
+    renderKPI(c, { value: stops.length.toLocaleString('fr-FR'), label: 'Points à afficher', source: 'GTFS' });
+    renderStopsMap(c, 'Réseau CarSud complet', stops);
+  } catch(e){
+    c.innerHTML += `<div class="error">Erreur carte : ${e.message}</div>`;
+  }
+}
+
+/* Carte Leaflet avec clusters pour les 2141 arrêts */
+function renderStopsMap(c, title, stops){
+  const card = renderCard(c, title, '<div class="map" style="height:520px"></div>', 'GTFS');
+  const mapDiv = card.querySelector('.map');
+  const map = L.map(mapDiv).setView([-21.25, 55.5], 10);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(map);
+
+  // Utiliser MarkerCluster si dispo
+  let layer;
+  if (typeof L.markerClusterGroup === 'function'){
+    layer = L.markerClusterGroup({ maxClusterRadius: 50 });
+  } else {
+    layer = L.featureGroup();
+  }
+
+  stops.forEach(s => {
+    if (!s.lat || !s.lon) return;
+    L.marker([s.lat, s.lon])
+      .bindPopup(`<strong>${s.nom || 'Arrêt'}</strong><br><small>${s.id}</small>`)
+      .addTo(layer);
+  });
+
+  layer.addTo(map);
+  if (layer.getBounds && layer.getLayers().length){
+    try { map.fitBounds(layer.getBounds().pad(0.1)); } catch(e){}
+  }
+  setTimeout(() => map.invalidateSize(), 200);
+  return map;
+}
+
+async function moduleDechets(c){
+  c.innerHTML = `
+    <div class="subtabs" id="dechets-subtabs">
+      <button class="subtab active" data-subtab="global">📊 Vue globale</button>
+      <button class="subtab" data-subtab="evolution">📈 Évolution 2023-2024</button>
+      <button class="subtab" data-subtab="detail">📋 Détail par type</button>
+      <button class="subtab" data-subtab="sinoe">🏛️ SINOE 2015</button>
+    </div>
+  `;
+  const tabs = c.querySelectorAll('#dechets-subtabs .subtab');
+  tabs.forEach(t => {
+    t.addEventListener('click', () => {
+      tabs.forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      renderDechetsTab(c, t.dataset.subtab);
+    });
+  });
+  renderDechetsTab(c, 'global');
+}
+
+async function renderDechetsTab(c, tab){
+  c.querySelectorAll(':scope > *:not(#dechets-subtabs)').forEach(el => el.remove());
+
+  if (tab === 'global')     await dechetsGlobal(c);
+  if (tab === 'evolution')  await dechetsEvolution(c);
+  if (tab === 'detail')     await dechetsDetail(c);
+  if (tab === 'sinoe')      await dechetsSinoe(c);
+}
+
+async function dechetsGlobal(c){
+  if (!DATA || !DATA.dechets){
+    renderCard(c, '⚠️ Données déchets non disponibles', 
+      `<p style="color:var(--amber);font-family:var(--font-mono);font-size:11px">
+        Aucune donnée dans casud-data.json
+      </p>`, 'info');
+    return;
+  }
+
+  const d = DATA.dechets;
+
+  renderKPI(c, { value: d.omr.tonnage.toLocaleString('fr-FR') + ' t', label: 'OMR', evolution: d.omr.evolution, source: 'RPQS 2024' });
+  renderKPI(c, { value: d.emr.tonnage.toLocaleString('fr-FR') + ' t', label: 'EMR', evolution: d.emr.evolution, source: 'RPQS 2024' });
+  renderKPI(c, { value: d.vegetaux.tonnage.toLocaleString('fr-FR') + ' t', label: 'Végétaux', evolution: d.vegetaux.evolution, source: 'RPQS 2024' });
+  renderKPI(c, { value: d.encombrants.tonnage.toLocaleString('fr-FR') + ' t', label: 'Encombrants', evolution: d.encombrants.evolution, source: 'RPQS 2024' });
+  renderKPI(c, { value: d.passages_decheteries.total.toLocaleString('fr-FR'), label: 'Passages déchèteries', evolution: d.passages_decheteries.evolution, source: 'RPQS 2024' });
+  renderKPI(c, { value: d.composteurs_distribues, label: 'Composteurs distribués', source: '2023' });
+
+  const total = d.omr.tonnage + d.emr.tonnage + d.vegetaux.tonnage + d.encombrants.tonnage + d.verre_bav.tonnage;
+  renderKPI(c, { value: total.toLocaleString('fr-FR') + ' t', label: 'Total déchets', source: 'RPQS 2024' });
+
+  renderChart(c, 'Déchets 2024 (t)', 'doughnut', {
+    labels: ['OMR', 'EMR', 'Végétaux', 'Encombrants', 'Verre BAV'],
+    datasets: [{
+      data: [d.omr.tonnage, d.emr.tonnage, d.vegetaux.tonnage, d.encombrants.tonnage, d.verre_bav.tonnage],
+      backgroundColor: ['#00e5ff','#00ff88','#ffb800','#a855f7','#ff3b3b']
+    }]
+  }, 'RPQS 2024');
+}
+
+async function dechetsEvolution(c){
+  if (!DATA || !DATA.dechets) return;
+  const d = DATA.dechets;
+
+  renderChart(c, 'Évolution 2023-2024 (t)', 'bar', {
+    labels: ['OMR', 'EMR', 'Végétaux', 'Encombrants', 'Verre BAV'],
+    datasets: [
+      { label: '2023', data: [30587, 4374, 16680, 10920, 1717], backgroundColor: '#8ba3c7' },
+      { label: '2024', data: [d.omr.tonnage, d.emr.tonnage, d.vegetaux.tonnage, d.encombrants.tonnage, d.verre_bav.tonnage], backgroundColor: '#00e5ff' }
+    ]
+  }, 'RPQS 2024');
+
+  renderChart(c, 'Évolutions en %', 'bar', {
+    labels: ['OMR', 'EMR', 'Végétaux', 'Encombrants', 'Verre BAV'],
+    datasets: [{
+      label: 'Évolution (%)',
+      data: [13.78, 18.61, 53.97, 38.61, 36.57],
+      backgroundColor: '#00ff88'
+    }]
+  }, 'RPQS 2024');
+}
+
+async function dechetsDetail(c){
+  if (!DATA || !DATA.dechets) return;
+  const d = DATA.dechets;
+
+  renderTable(c, 'Détail déchets 2024', [
+    { type: 'OMR', t2023: 30587, t2024: d.omr.tonnage, evol: d.omr.evolution },
+    { type: 'EMR', t2023: 4374, t2024: d.emr.tonnage, evol: d.emr.evolution },
+    { type: 'Végétaux', t2023: 16680, t2024: d.vegetaux.tonnage, evol: d.vegetaux.evolution },
+    { type: 'Encombrants', t2023: 10920, t2024: d.encombrants.tonnage, evol: d.encombrants.evolution },
+    { type: 'VHU', t2023: 685, t2024: d.vhu.unites, evol: d.vhu.evolution },
+    { type: 'Verre BAV', t2023: 1717, t2024: d.verre_bav.tonnage, evol: d.verre_bav.evolution }
+  ], [
+    { key: 'type', label: 'Type' },
+    { key: 't2023', label: '2023' },
+    { key: 't2024', label: '2024' },
+    { key: 'evol', label: 'Évolution' }
+  ], 'RPQS 2024');
+}
+
+async function dechetsSinoe(c){
+  try {
+    const url = 'https://data.regionreunion.com/api/explore/v2.1/catalog/datasets/sinoer-collecte-dechets-menagers-et-assimiles-2015public/records?limit=100';
+    const res = await fetch(url);
+    const json = await res.json();
+    const data = json.results || [];
+
+    renderKPI(c, { value: data.length, label: 'Lignes SINOE 2015', source: 'Région' });
+
+    if (data.length > 0){
+      const keys = Object.keys(data[0]);
+      renderTable(c, 'Données SINOE 2015 (échantillon)', data.slice(0, 50).map(d => {
+        const obj = {};
+        keys.slice(0, 5).forEach(k => obj[k] = d[k] ?? '—');
+        return obj;
+      }), keys.slice(0, 5).map(k => ({ key: k, label: k })), 'Région');
+    }
+  } catch(e){
+    c.innerHTML += `<div class="error">Erreur SINOE : ${e.message}</div>`;
+  }
+}
+
+async function moduleEau(c){
+  if (!DATA) return;
+  const e = DATA.eau_potable;
+  const a = DATA.assainissement;
+  renderKPI(c, { value: e.population_desservie.toLocaleString('fr-FR'), label: 'Population desservie', source: 'RPQS 2024' });
+  renderKPI(c, { value: e.abonnes.toLocaleString('fr-FR'), label: 'Abonnés', source: 'RPQS 2024' });
+  renderKPI(c, { value: e.consommation_moyenne_m3 + ' m³', label: 'Conso moyenne/abonné', source: 'RPQS 2024' });
+  renderKPI(c, { value: a.prix_m3_ttc + ' €', label: 'Prix assainissement/m³', source: 'Eaufrance 2024' });
+  renderKPI(c, { value: a.usagers_anc.toLocaleString('fr-FR'), label: 'Usagers ANC', source: 'RPQS 2024' });
+  renderKPI(c, { value: a.conformite_anc, label: 'Conformité ANC', source: 'RPQS 2024' });
+
+  renderChart(c, 'Conformité assainissement', 'doughnut', {
+    labels: ['Conformes', 'Non conformes'],
+    datasets: [{ data: [57, 43], backgroundColor: ['#00ff88', '#ff3b3b'] }]
+  }, 'RPQS 2024');
+}
+
+async function moduleHabitat(c){
+  c.innerHTML = `
+    <div class="subtabs" id="habitat-subtabs">
+      <button class="subtab active" data-subtab="global">📊 Vue globale</button>
+      <button class="subtab" data-subtab="permis">📋 Permis de construire</button>
+      <button class="subtab" data-subtab="sociaux">🏘️ Logements sociaux</button>
+      <button class="subtab" data-subtab="caf">👥 Bénéficiaires CAF</button>
+    </div>
+  `;
+  const tabs = c.querySelectorAll('#habitat-subtabs .subtab');
+  tabs.forEach(t => {
+    t.addEventListener('click', () => {
+      tabs.forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      renderHabitatTab(c, t.dataset.subtab);
+    });
+  });
+  renderHabitatTab(c, 'global');
+}
+
+async function renderHabitatTab(c, tab){
+  c.querySelectorAll(':scope > *:not(#habitat-subtabs)').forEach(el => el.remove());
+
+  if (tab === 'global')   await habitatGlobal(c);
+  if (tab === 'permis')   await habitatPermis(c);
+  if (tab === 'sociaux')  await habitatSociaux(c);
+  if (tab === 'caf')      await habitatCaf(c);
+}
+
+async function fetchAll(url, maxPages = 25) {
+  let all = [], offset = 0, page = 0;
+  while (page < maxPages) {
+    const res = await fetch(`${url}${url.includes('?') ? '&' : '?'}limit=100&offset=${offset}`);
+    const json = await res.json();
+    const batch = json.results || [];
+    all = all.concat(batch);
+    if (batch.length < 100) break;
+    offset += 100;
+    page++;
+  }
+  return all;
+}
+
+async function habitatGlobal(c){
+  if (DATA && DATA.habitat){
+    const h = DATA.habitat;
+    renderKPI(c, { value: (h.nouveaux_logements/1000) + 'k', label: 'Logements à accueillir', source: 'ITI 2024' });
+    renderKPI(c, { value: h.taux_vacance, label: 'Taux de vacance', source: 'ITI 2024' });
+    renderKPI(c, { value: h.habitats_precaires, label: 'Habitats précaires', source: 'ITI 2024' });
+  }
+
+  // Compter les permis pour les 6 entités CASUD
+  try {
+    const communes = ['Le Tampon', 'Saint-Joseph', 'Saint-Philippe', 'Entre-Deux', 'Petite-Ile'];
+    const where = communes.map(cm => `comm="${cm}"`).join(' OR ');
+    const url = `https://data.regionreunion.com/api/explore/v2.1/catalog/datasets/liste-des-permis-de-construire-et-autres-autorisations-d-urbanisme-a-la-reunion/records?limit=1&where=${encodeURIComponent(where)}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    renderKPI(c, { value: (json.total_count || 0).toLocaleString('fr-FR'), label: 'Permis de construire', source: 'Région' });
+  } catch(e){}
+}
+
+async function habitatPermis(c){
+  try {
+    // Codes INSEE des 5 communes CASUD
+    const codes = ['97422', '97411', '97416', '97403', '97404'];
+    const where = codes.map(c => `comm="${c}"`).join(' OR ');
+
+    // Charger tous les permis CASUD (pagination)
+    let all = [], offset = 0, page = 0;
+    while (page < 25) {
+      const url = `https://data.regionreunion.com/api/explore/v2.1/catalog/datasets/liste-des-permis-de-construire-et-autres-autorisations-d-urbanisme-a-la-reunion/records?limit=100&offset=${offset}&where=${encodeURIComponent(where)}`;
+      const res = await fetch(url);
+      const json = await res.json();
+      const batch = json.results || [];
+      all = all.concat(batch);
+      if (batch.length < 100) break;
+      offset += 100;
+      page++;
+    }
+
+    renderKPI(c, { value: all.length.toLocaleString('fr-FR'), label: 'Permis CASUD', source: 'Région' });
+
+    // Total logements créés
+    const totalLogts = all.reduce((s, p) => s + (p.nb_lgt_tot_crees || 0), 0);
+    renderKPI(c, { value: totalLogts.toLocaleString('fr-FR'), label: 'Logements créés', source: 'Région' });
+
+    // Total surface habitable créée
+    const totalSurf = all.reduce((s, p) => s + (p.surf_hab_creee || 0), 0);
+    renderKPI(c, { value: Math.round(totalSurf).toLocaleString('fr-FR') + ' m²', label: 'Surface créée', source: 'Région' });
+
+    // Par commune
+    const parCommune = {};
+    const nomsCommunes = {
+      '97422': 'Le Tampon',
+      '97411': 'Saint-Joseph',
+      '97416': 'Saint-Philippe',
+      '97403': 'Entre-Deux',
+      '97404': 'Petite-Île'
+    };
+    all.forEach(p => {
+      const cm = nomsCommunes[p.comm] || p.comm || 'Autre';
+      parCommune[cm] = (parCommune[cm] || 0) + 1;
+    });
+    const sortedC = Object.entries(parCommune).sort((a,b) => b[1] - a[1]);
+    if (sortedC.length > 1){
+      renderChart(c, 'Permis par commune', 'bar', {
+        labels: sortedC.map(s => s[0]),
+        datasets: [{ label: 'Nb permis', data: sortedC.map(s => s[1]), backgroundColor: '#00ff88' }]
+      }, 'Région');
+    }
+
+    // Par type
+    const parType = {};
+    all.forEach(p => {
+      const t = p.type_dau || 'Autre';
+      parType[t] = (parType[t] || 0) + 1;
+    });
+    const sortedT = Object.entries(parType).sort((a,b) => b[1] - a[1]);
+    if (sortedT.length > 1){
+      renderChart(c, 'Permis par type', 'doughnut', {
+        labels: sortedT.map(t => t[0]),
+        datasets: [{
+          data: sortedT.map(t => t[1]),
+          backgroundColor: ['#00e5ff','#00ff88','#ffb800','#a855f7','#ff3b3b']
+        }]
+      }, 'Région');
+    }
+
+    // Par destination principale
+    const parDest = {};
+    all.forEach(p => {
+      const d = p.destination_principale || 'Non renseignée';
+      parDest[d] = (parDest[d] || 0) + 1;
+    });
+    const sortedD = Object.entries(parDest).sort((a,b) => b[1] - a[1]).slice(0, 8);
+    if (sortedD.length > 1){
+      renderChart(c, 'Permis par destination', 'bar', {
+        labels: sortedD.map(d => String(d[0] || '').substring(0, 25)),
+        datasets: [{ label: 'Nb', data: sortedD.map(d => d[1]), backgroundColor: '#ffb800' }]
+      }, 'Région');
+    }
+
+    // Timeline par année
+    const parAnnee = {};
+    all.forEach(p => {
+      const dateVal = p.date_reelle_autorisation;
+      const dateStr = typeof dateVal === 'string' ? dateVal : (dateVal?.date || dateVal?.toString() || '');
+      const y = dateStr.substring(0, 4);
+      if (y && y !== '' && !isNaN(y)) parAnnee[y] = (parAnnee[y] || 0) + 1;
+    });
+    const sortedY = Object.keys(parAnnee).sort();
+    if (sortedY.length > 1){
+      renderChart(c, 'Permis par année', 'line', {
+        labels: sortedY,
+        datasets: [{
+          label: 'Nb permis',
+          data: sortedY.map(y => parAnnee[y]),
+          borderColor: '#00e5ff',
+          backgroundColor: 'rgba(0,229,255,0.15)',
+          fill: true,
+          tension: 0.3
+        }]
+      }, 'Région');
+    }
+
+    // Tableau
+    renderTable(c, `Permis CASUD (${all.length})`, all.slice(0, 50).map(p => ({
+      num: p.num_dau || '—',
+      commune: nomsCommunes[p.comm] || p.comm || '—',
+      type: p.type_dau || '—',
+      dest: String(p.destination_principale || '—').substring(0, 30),
+      logts: p.nb_lgt_tot_crees || '—',
+      surface: p.surf_hab_creee ? Math.round(p.surf_hab_creee) + ' m²' : '—',
+      date: (typeof p.date_reelle_autorisation === 'string' ? p.date_reelle_autorisation : (p.date_reelle_autorisation?.date || '—')).substring(0, 10)
+    })), [
+      { key: 'num', label: 'N° permis' },
+      { key: 'commune', label: 'Commune' },
+      { key: 'type', label: 'Type' },
+      { key: 'dest', label: 'Destination' },
+      { key: 'logts', label: 'Logements' },
+      { key: 'surface', label: 'Surface' },
+      { key: 'date', label: 'Date' }
+    ], 'Région');
+
+  } catch(e){
+    c.innerHTML += `<div class="error">Erreur permis : ${e.message}</div>`;
+  }
+}
+
+async function habitatSociaux(c){
+  try {
+    const url = 'https://data.regionreunion.com/api/explore/v2.1/catalog/datasets/financement-et-cout-des-logements-sociaux-construits-a-la-reunion/records?limit=100';
+    const res = await fetch(url);
+    const json = await res.json();
+    const data = json.results || [];
+
+    renderKPI(c, { value: data.length, label: 'Logements sociaux', source: 'Région' });
+
+    if (data.length > 0){
+      renderTable(c, 'Financement logements sociaux', data.map(d => {
+        const obj = {};
+        const keys = Object.keys(d).slice(0, 6);
+        keys.forEach(k => obj[k] = d[k] ?? '—');
+        return obj;
+      }), Object.keys(data[0]).slice(0, 6).map(k => ({ key: k, label: k })), 'Région');
+    } else {
+      renderCard(c, '⚠️ Dataset limité', `
+        <p style="color:var(--amber);font-family:var(--font-mono);font-size:11px">
+          Ce dataset contient peu de lignes (8 au total). Données non détaillées par commune.
+        </p>
+      `, 'diagnostic');
+    }
+  } catch(e){
+    c.innerHTML += `<div class="error">Erreur logements sociaux : ${e.message}</div>`;
+  }
+}
+
+async function habitatCaf(c){
+  try {
+    const url = 'https://data.regionreunion.com/api/explore/v2.1/catalog/datasets/beneficiaires-presta-sociales-caf-lareunion/records?limit=100';
+    const res = await fetch(url);
+    const json = await res.json();
+    const data = json.results || [];
+
+    renderKPI(c, { value: (json.total_count || data.length).toLocaleString('fr-FR'), label: 'Bénéficiaires CAF', source: 'Région' });
+
+    // Par type de prestation
+    const parType = {};
+    data.forEach(d => {
+      const t = d.type_prestation || 'Autre';
+      parType[t] = (parType[t] || 0) + (d.nbbeneficiaires || 0);
+    });
+    const sorted = Object.entries(parType).sort((a,b) => b[1] - a[1]).slice(0, 10);
+    if (sorted.length > 1){
+      renderChart(c, 'Bénéficiaires CAF par prestation', 'bar', {
+        labels: sorted.map(s => s[0].substring(0, 30)),
+        datasets: [{
+          label: 'Bénéficiaires',
+          data: sorted.map(s => s[1]),
+          backgroundColor: '#00ff88'
+        }]
+      }, 'Région');
+    }
+  } catch(e){
+    c.innerHTML += `<div class="error">Erreur CAF : ${e.message}</div>`;
+  }
+}
+
+async function moduleEnergie(c){
+  c.innerHTML = `
+    <div class="subtabs" id="energie-subtabs">
+      <button class="subtab active" data-subtab="global">📊 Vue globale</button>
+      <button class="subtab" data-subtab="reseau">⚡ Réseau EDF</button>
+      <button class="subtab" data-subtab="petrole">🛢️ Produits pétroliers</button>
+      <button class="subtab" data-subtab="projets">🌱 Projets</button>
+    </div>
+  `;
+  const tabs = c.querySelectorAll('#energie-subtabs .subtab');
+  tabs.forEach(t => {
+    t.addEventListener('click', () => {
+      tabs.forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      renderEnergieTab(c, t.dataset.subtab);
+    });
+  });
+  renderEnergieTab(c, 'global');
+}
+
+async function renderEnergieTab(c, tab){
+  c.querySelectorAll(':scope > *:not(#energie-subtabs)').forEach(el => el.remove());
+
+  if (tab === 'global')   await energieGlobal(c);
+  if (tab === 'reseau')   await energieReseau(c);
+  if (tab === 'petrole')  await energiePetrole(c);
+  if (tab === 'projets')  await energieProjets(c);
+}
+
+async function energieGlobal(c){
+  if (DATA && DATA.energie){
+    const e = DATA.energie;
+    renderKPI(c, { value: e.geothermie_mw + ' MW', label: 'Géothermie', source: 'Projet CASUD' });
+    renderKPI(c, { value: e.geothermie_foyers.toLocaleString('fr-FR'), label: 'Foyers équivalents', source: 'Projet CASUD' });
+    renderKPI(c, { value: (e.methanisation_t_an/1000) + 'k t/an', label: 'Méthanisation', source: 'Projet CASUD' });
+    renderKPI(c, { value: e.methanisation_foyers.toLocaleString('fr-FR'), label: 'Foyers biogaz', source: 'Projet CASUD' });
+  }
+
+  // Réseau EDF
+  try {
+    const url = 'https://data.regionreunion.com/api/explore/v2.1/catalog/datasets/developpement-et-lineaire-du-reseau-electrique-la-reunion-edf/records?limit=100';
+    const res = await fetch(url);
+    const json = await res.json();
+    const data = json.results || [];
+
+    if (data.length > 0){
+      const last = data[data.length - 1];
+      const htb = last.htb_total_km || 0;
+      const hta = last.hta_total_km || 0;
+      const bt = last.bt_total_km || 0;
+      renderKPI(c, { value: (htb + hta + bt).toFixed(0) + ' km', label: 'Réseau EDF total', source: 'EDF ' + (last.annee || '') });
+    }
+  } catch(e){}
+
+  // Produits pétroliers
+  try {
+    const url = 'https://data.regionreunion.com/api/explore/v2.1/catalog/datasets/donnees-locales-de-consommation-de-produits-petroliers-a-la-reunion/records?limit=100';
+    const res = await fetch(url);
+    const json = await res.json();
+    renderKPI(c, { value: (json.results || []).length, label: 'Lignes pétroliers', source: 'Région' });
+  } catch(e){}
+}
+
+async function energieReseau(c){
+  try {
+    const url = 'https://data.regionreunion.com/api/explore/v2.1/catalog/datasets/developpement-et-lineaire-du-reseau-electrique-la-reunion-edf/records?limit=100';
+    const res = await fetch(url);
+    const json = await res.json();
+    const data = json.results || [];
+
+    renderKPI(c, { value: data.length, label: 'Lignes réseau EDF', source: 'EDF' });
+
+    // Graphique évolution HTB/HTA/BT
+    const sorted = [...data].sort((a,b) => (a.annee || 0) - (b.annee || 0));
+    const labels = sorted.map(d => d.annee || '?');
+
+    if (labels.length > 1){
+      renderChart(c, 'Évolution du réseau électrique (km)', 'line', {
+        labels,
+        datasets: [
+          { label: 'HTB', data: sorted.map(d => d.htb_total_km || 0), borderColor: '#ff3b3b', backgroundColor: 'transparent', tension: 0.3 },
+          { label: 'HTA', data: sorted.map(d => d.hta_total_km || 0), borderColor: '#ffb800', backgroundColor: 'transparent', tension: 0.3 },
+          { label: 'BT', data: sorted.map(d => d.bt_total_km || 0), borderColor: '#00ff88', backgroundColor: 'transparent', tension: 0.3 }
+        ]
+      }, 'EDF');
+    }
+
+    // Tableau
+    renderTable(c, 'Détail réseau EDF', data.map(d => ({
+      annee: d.annee || '—',
+      htb: (d.htb_total_km || 0).toFixed(1) + ' km',
+      hta: (d.hta_total_km || 0).toFixed(1) + ' km',
+      bt: (d.bt_total_km || 0).toFixed(1) + ' km',
+      postes_htb_hta: d.postes_htb_hta_nombre || '—',
+      postes_hta_bt: d.postes_hta_bt_nombre || '—'
+    })), [
+      { key: 'annee', label: 'Année' },
+      { key: 'htb', label: 'HTB' },
+      { key: 'hta', label: 'HTA' },
+      { key: 'bt', label: 'BT' },
+      { key: 'postes_htb_hta', label: 'Postes HTB/HTA' },
+      { key: 'postes_hta_bt', label: 'Postes HTA/BT' }
+    ], 'EDF');
+  } catch(e){
+    c.innerHTML += `<div class="error">Erreur réseau : ${e.message}</div>`;
+  }
+}
+
+async function energiePetrole(c){
+  try {
+    const url = 'https://data.regionreunion.com/api/explore/v2.1/catalog/datasets/donnees-locales-de-consommation-de-produits-petroliers-a-la-reunion/records?limit=100';
+    const res = await fetch(url);
+    const json = await res.json();
+    const data = json.results || [];
+
+    renderKPI(c, { value: data.length, label: 'Lignes pétroliers', source: 'Région' });
+
+    if (data.length > 0){
+      // Afficher les premiers champs
+      const keys = Object.keys(data[0]);
+      renderTable(c, 'Consommation produits pétroliers', data.map(d => {
+        const obj = {};
+        keys.slice(0, 5).forEach(k => obj[k] = d[k] ?? '—');
+        return obj;
+      }), keys.slice(0, 5).map(k => ({ key: k, label: k })), 'Région');
+    }
+  } catch(e){
+    c.innerHTML += `<div class="error">Erreur pétrole : ${e.message}</div>`;
+  }
+}
+
+async function energieProjets(c){
+  if (!DATA || !DATA.energie){
+    renderCard(c, '⚠️ Données projets non disponibles', 
+      `<p style="color:var(--amber);font-family:var(--font-mono);font-size:11px">
+        Aucune donnée projet dans casud-data.json
+      </p>`, 'info');
+    return;
+  }
+
+  const e = DATA.energie;
+  renderKPI(c, { value: e.geothermie_mw + ' MW', label: 'Géothermie', source: 'Projet CASUD' });
+  renderKPI(c, { value: e.geothermie_foyers.toLocaleString('fr-FR'), label: 'Foyers équivalents', source: 'Projet CASUD' });
+  renderKPI(c, { value: (e.methanisation_t_an/1000) + 'k t/an', label: 'Méthanisation', source: 'Projet CASUD' });
+  renderKPI(c, { value: e.methanisation_foyers.toLocaleString('fr-FR'), label: 'Foyers biogaz', source: 'Projet CASUD' });
+
+  renderChart(c, 'Projets énergie CASUD', 'bar', {
+    labels: ['Géothermie', 'Méthanisation'],
+    datasets: [{
+      label: 'Foyers alimentés',
+      data: [e.geothermie_foyers, e.methanisation_foyers],
+      backgroundColor: ['#a855f7', '#00ff88']
+    }]
+  }, 'Projets CASUD');
+
+  renderCard(c, 'Détail des projets', `
+    <table>
+      <tr><th>Projet</th><th>Capacité</th><th>Impact</th></tr>
+      <tr>
+        <td><strong style="color:var(--purple)">🌋 Géothermie</strong></td>
+        <td>${e.geothermie_mw} MW</td>
+        <td>${e.geothermie_foyers.toLocaleString('fr-FR')} foyers</td>
+      </tr>
+      <tr>
+        <td><strong style="color:var(--green)">♻️ Méthanisation</strong></td>
+        <td>${(e.methanisation_t_an/1000)}k t/an</td>
+        <td>${e.methanisation_foyers.toLocaleString('fr-FR')} foyers biogaz</td>
+      </tr>
+    </table>
+  `, 'CASUD');
+}
+
+async function moduleFinances(c){
+  c.innerHTML = `
+    <div class="subtabs" id="finances-subtabs">
+      <button class="subtab active" data-subtab="global">📊 Vue globale</button>
+      <button class="subtab" data-subtab="bp">🏛️ BP Région 2020</button>
+      <button class="subtab" data-subtab="sections">📂 Sections</button>
+      <button class="subtab" data-subtab="chapitres">📋 Chapitres</button>
+    </div>
+  `;
+  const tabs = c.querySelectorAll('#finances-subtabs .subtab');
+  tabs.forEach(t => {
+    t.addEventListener('click', () => {
+      tabs.forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      renderFinancesTab(c, t.dataset.subtab);
+    });
+  });
+  renderFinancesTab(c, 'global');
+}
+
+async function renderFinancesTab(c, tab){
+  c.querySelectorAll(':scope > *:not(#finances-subtabs)').forEach(el => el.remove());
+
+  if (tab === 'global')    await financesGlobal(c);
+  if (tab === 'bp')        await financesBP(c);
+  if (tab === 'sections')  await financesSections(c);
+  if (tab === 'chapitres') await financesChapitres(c);
+}
+
+async function fetchBPData(){
+  let all = [], offset = 0;
+  while (offset < 1200) {
+    const url = `https://data.regionreunion.com/api/explore/v2.1/catalog/datasets/bp_012020_lareunion/records?limit=100&offset=${offset}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    const batch = json.results || [];
+    all = all.concat(batch);
+    if (batch.length < 100) break;
+    offset += 100;
+  }
+  return all;
+}
+
+async function financesGlobal(c){
+  if (DATA && DATA.finances){
+    const f = DATA.finances;
+    renderKPI(c, { value: f.recettes_fonctionnement_meur + ' M€', label: 'Recettes fonct.', source: 'Budget 2024' });
+    renderKPI(c, { value: f.depenses_fonctionnement_meur + ' M€', label: 'Dépenses fonct.', source: 'Budget 2024' });
+    renderKPI(c, { value: f.excedent_fonctionnement_meur + ' M€', label: 'Excédent', source: 'Budget 2024' });
+    renderKPI(c, { value: f.depenses_investissement_meur + ' M€', label: 'Investissement', source: 'Budget 2024' });
+
+    renderChart(c, 'Budget CASUD 2024 (M€)', 'bar', {
+      labels: ['Fonctionnement', 'Investissement'],
+      datasets: [
+        { label: 'Recettes', data: [f.recettes_fonctionnement_meur, f.recettes_investissement_meur], backgroundColor: '#00ff88' },
+        { label: 'Dépenses', data: [f.depenses_fonctionnement_meur, f.depenses_investissement_meur], backgroundColor: '#ff3b3b' }
+      ]
+    }, 'Budget 2024');
+  }
+}
+
+async function financesBP(c){
+  try {
+    const data = await fetchBPData();
+    renderKPI(c, { value: data.length.toLocaleString('fr-FR'), label: 'Lignes budgétaires', source: 'BP Région 2020' });
+
+    const totalDep = data.reduce((s, r) => s + (r.montant_vote_depense_bp || 0), 0);
+    const totalRec = data.reduce((s, r) => s + (r.montant_vote_recette_bp || 0), 0);
+    renderKPI(c, { value: (totalDep/1e6).toFixed(1) + ' M€', label: 'Total dépenses', source: 'BP Région 2020' });
+    renderKPI(c, { value: (totalRec/1e6).toFixed(1) + ' M€', label: 'Total recettes', source: 'BP Région 2020' });
+
+    // Doughnut par section
+    const parSection = {};
+    data.forEach(r => {
+      const s = r.section_code === 'F' ? 'Fonctionnement' : r.section_code === 'I' ? 'Investissement' : 'Autre';
+      parSection[s] = (parSection[s] || 0) + (r.montant_vote_depense_bp || 0) + (r.montant_vote_recette_bp || 0);
+    });
+    if (Object.keys(parSection).length > 1){
+      renderChart(c, 'Répartition par section', 'doughnut', {
+        labels: Object.keys(parSection),
+        datasets: [{
+          data: Object.values(parSection),
+          backgroundColor: ['#00e5ff', '#ffb800', '#a855f7']
+        }]
+      }, 'BP Région 2020');
+    }
+
+    // Tableau échantillon
+    renderTable(c, 'Échantillon BP Région 2020', data.slice(0, 50).map(r => ({
+      section: r.section_code === 'F' ? 'Fonctionnement' : r.section_code === 'I' ? 'Investissement' : r.section_code,
+      chapitre: (r.chapitre || '—').substring(0, 30),
+      sous_fonction: (r.sous_fonction || '—').substring(0, 30),
+      nature: (r.nature_lib || '—').substring(0, 30),
+      depense: r.montant_vote_depense_bp ? (r.montant_vote_depense_bp/1000).toFixed(0) + ' k€' : '—',
+      recette: r.montant_vote_recette_bp ? (r.montant_vote_recette_bp/1000).toFixed(0) + ' k€' : '—'
+    })), [
+      { key: 'section', label: 'Section' },
+      { key: 'chapitre', label: 'Chapitre' },
+      { key: 'sous_fonction', label: 'Sous-fonction' },
+      { key: 'nature', label: 'Nature' },
+      { key: 'depense', label: 'Dépense' },
+      { key: 'recette', label: 'Recette' }
+    ], 'BP Région 2020');
+  } catch(e){
+    c.innerHTML += `<div class="error">Erreur BP : ${e.message}</div>`;
+  }
+}
+
+async function financesSections(c){
+  try {
+    const data = await fetchBPData();
+
+    const sections = { F: 'Fonctionnement', I: 'Investissement' };
+    const stats = {};
+    Object.entries(sections).forEach(([code, nom]) => {
+      const rows = data.filter(r => r.section_code === code);
+      stats[nom] = {
+        count: rows.length,
+        dep: rows.reduce((s, r) => s + (r.montant_vote_depense_bp || 0), 0),
+        rec: rows.reduce((s, r) => s + (r.montant_vote_recette_bp || 0), 0)
+      };
+    });
+
+    renderKPI(c, { value: stats.Fonctionnement.count, label: 'Lignes fonctionnement', source: 'BP' });
+    renderKPI(c, { value: (stats.Fonctionnement.dep/1e6).toFixed(1) + ' M€', label: 'Dép. fonctionnement', source: 'BP' });
+    renderKPI(c, { value: stats.Investissement.count, label: 'Lignes investissement', source: 'BP' });
+    renderKPI(c, { value: (stats.Investissement.dep/1e6).toFixed(1) + ' M€', label: 'Dép. investissement', source: 'BP' });
+
+    renderChart(c, 'Dépenses par section (M€)', 'bar', {
+      labels: ['Fonctionnement', 'Investissement'],
+      datasets: [{
+        label: 'Dépenses (M€)',
+        data: [
+          +(stats.Fonctionnement.dep/1e6).toFixed(1),
+          +(stats.Investissement.dep/1e6).toFixed(1)
+        ],
+        backgroundColor: ['#00e5ff', '#ffb800']
+      }]
+    }, 'BP Région 2020');
+
+    renderChart(c, 'Recettes par section (M€)', 'bar', {
+      labels: ['Fonctionnement', 'Investissement'],
+      datasets: [{
+        label: 'Recettes (M€)',
+        data: [
+          +(stats.Fonctionnement.rec/1e6).toFixed(1),
+          +(stats.Investissement.rec/1e6).toFixed(1)
+        ],
+        backgroundColor: ['#00ff88', '#a855f7']
+      }]
+    }, 'BP Région 2020');
+  } catch(e){
+    c.innerHTML += `<div class="error">Erreur sections : ${e.message}</div>`;
+  }
+}
+
+async function financesChapitres(c){
+  try {
+    const data = await fetchBPData();
+
+    // Top 10 chapitres par dépenses
+    const parChapitre = {};
+    data.forEach(r => {
+      const ch = r.chapitre || 'Autre';
+      parChapitre[ch] = (parChapitre[ch] || 0) + (r.montant_vote_depense_bp || 0);
+    });
+    const sorted = Object.entries(parChapitre).sort((a,b) => b[1] - a[1]).slice(0, 10);
+    if (sorted.length > 1){
+      renderChart(c, 'Top 10 chapitres (dépenses M€)', 'bar', {
+        labels: sorted.map(ch => ch[0].substring(0, 30)),
+        datasets: [{
+          label: 'Dépenses (M€)',
+          data: sorted.map(ch => +(ch[1]/1e6).toFixed(1)),
+          backgroundColor: '#00e5ff'
+        }]
+      }, 'BP Région 2020');
+    }
+
+    // Top 10 natures
+    const parNature = {};
+    data.forEach(r => {
+      const n = r.nature_lib || 'Autre';
+      parNature[n] = (parNature[n] || 0) + (r.montant_vote_depense_bp || 0);
+    });
+    const sortedN = Object.entries(parNature).sort((a,b) => b[1] - a[1]).slice(0, 10);
+    if (sortedN.length > 1){
+      renderChart(c, 'Top 10 natures (dépenses M€)', 'bar', {
+        labels: sortedN.map(n => n[0].substring(0, 25)),
+        datasets: [{
+          label: 'Dépenses (M€)',
+          data: sortedN.map(n => +(n[1]/1e6).toFixed(1)),
+          backgroundColor: '#ffb800'
+        }]
+      }, 'BP Région 2020');
+    }
+  } catch(e){
+    c.innerHTML += `<div class="error">Erreur chapitres : ${e.message}</div>`;
+  }
+}
+
+async function moduleInvestissements(c){
+  const communes = ['Casud','Saint-Joseph','Saint-Philippe','Entre-Deux','Petite-Ile','Le Tampon'];
+  const where = communes.map(cm => `communes="${cm}"`).join(' OR ');
+
+  try {
+    let all = [], offset = 0;
+    while (offset < 200) {
+      const url = `https://data.regionreunion.com/api/explore/v2.1/catalog/datasets/test_tcomhs/records?limit=100&offset=${offset}&where=${encodeURIComponent(where)}`;
+      const res = await fetch(url);
+      const json = await res.json();
+      const batch = json.results || [];
+      all = all.concat(batch);
+      if (batch.length < 100) break;
+      offset += 100;
+    }
+
+    const state = { commune: '', domaine: '', periode: '' };
+
+    const communesList = [...new Set(all.map(o => o.communes).filter(Boolean))].sort();
+    const domainesList = [...new Set(all.map(o => o.domaine).filter(Boolean))].sort();
+
+    function computeKPI(data){
+      const total = data.length;
+      const coutTotal = data.reduce((s, o) => s + (o.cout_ht || 0), 0);
+      const subvTotal = data.reduce((s, o) => s + (o.montant_de_la_subvention || 0), 0);
+      const soldees = data.filter(o => (o.observations || '').toLowerCase().includes('sold')).length;
+      return { total, coutTotal, subvTotal, soldees };
+    }
+
+    function render(){
+      c.querySelectorAll(':scope > *:not(.invest-filters)').forEach(el => el.remove());
+
+      let data = all;
+      if (state.commune)  data = data.filter(o => o.communes === state.commune);
+      if (state.domaine)  data = data.filter(o => o.domaine === state.domaine);
+      if (state.periode){
+        const [min, max] = state.periode.split('-').map(Number);
+        data = data.filter(o => {
+          const y = parseInt(o.prog, 10);
+          return !isNaN(y) && y >= min && y <= max;
+        });
+      }
+
+      const countEl = c.querySelector('.invest-filters .count');
+      if (countEl) countEl.textContent = `${data.length} / ${all.length} opérations`;
+
+      const k = computeKPI(data);
+      renderKPI(c, { value: k.total, label: 'Opérations', source: 'CPER' });
+      renderKPI(c, { value: (k.coutTotal/1e6).toFixed(1) + ' M€', label: 'Coût HT', source: 'CPER' });
+      renderKPI(c, { value: (k.subvTotal/1e6).toFixed(1) + ' M€', label: 'Subvention', source: 'CPER' });
+      renderKPI(c, { value: k.soldees + '/' + k.total, label: 'Soldées', source: 'CPER' });
+
+      const parDomaine = {};
+      data.forEach(o => { const d = o.domaine || 'Autre'; parDomaine[d] = (parDomaine[d] || 0) + 1; });
+      const sortedD = Object.entries(parDomaine).sort((a,b) => b[1] - a[1]).slice(0, 10);
+      if (sortedD.length > 1) {
+        renderChart(c, 'Opérations par domaine', 'doughnut', {
+          labels: sortedD.map(d => d[0]),
+          datasets: [{
+            data: sortedD.map(d => d[1]),
+            backgroundColor: ['#00e5ff','#00ff88','#ffb800','#a855f7','#ff3b3b','#3b82f6','#9b59b6','#1abc9c']
+          }]
+        }, 'CPER');
+      }
+
+      const parAnnee = {};
+      data.forEach(o => {
+        const y = o.prog || 'N/A';
+        parAnnee[y] = (parAnnee[y] || 0) + (o.cout_ht || 0);
+      });
+      const sortedY = Object.keys(parAnnee).sort();
+      if (sortedY.length > 1) {
+        renderChart(c, 'Budget par année (M€)', 'line', {
+          labels: sortedY,
+          datasets: [{
+            label: 'Coût HT (M€)',
+            data: sortedY.map(y => +(parAnnee[y]/1e6).toFixed(2)),
+            borderColor: '#00e5ff',
+            backgroundColor: 'rgba(0,229,255,0.15)',
+            fill: true, tension: 0.3
+          }]
+        }, 'CPER');
+      }
+
+      const parCommune = {};
+      data.forEach(o => {
+        const cm = o.communes || 'Inconnue';
+        parCommune[cm] = (parCommune[cm] || 0) + 1;
+      });
+      const sortedC = Object.entries(parCommune).sort((a,b) => b[1] - a[1]);
+      if (sortedC.length > 1) {
+        renderChart(c, 'Opérations par commune', 'bar', {
+          labels: sortedC.map(cm => cm[0]),
+          datasets: [{ label: 'Nb opérations', data: sortedC.map(cm => cm[1]), backgroundColor: '#00ff88' }]
+        }, 'CPER');
+      }
+
+      const topOps = [...data]
+        .filter(o => o.cout_ht && o.cout_ht > 0)
+        .sort((a,b) => b.cout_ht - a.cout_ht)
+        .slice(0, 10);
+      if (topOps.length) {
+        renderChart(c, 'Top 10 opérations (coût HT)', 'bar', {
+          labels: topOps.map(o => (o.objet || '?').substring(0, 30)),
+          datasets: [{
+            label: 'Coût HT (€)',
+            data: topOps.map(o => o.cout_ht),
+            backgroundColor: '#a855f7'
+          }]
+        }, 'CPER');
+      }
+
+      const rows = data
+        .sort((a,b) => (b.prog || '').localeCompare(a.prog || ''))
+        .slice(0, 50)
+        .map(o => ({
+          commune: o.communes || '—',
+          domaine: o.domaine || '—',
+          objet: (o.objet || '—').substring(0, 60),
+          cout: o.cout_ht ? (o.cout_ht/1000).toFixed(0) + ' k€' : '—',
+          subv: o.montant_de_la_subvention ? (o.montant_de_la_subvention/1000).toFixed(0) + ' k€' : '—',
+          prog: o.prog || '—',
+          etat: (o.observations || '—').substring(0, 40)
+        }));
+
+      renderTable(c, `Opérations (${data.length})`, rows, [
+        { key: 'commune', label: 'Commune' },
+        { key: 'domaine', label: 'Domaine' },
+        { key: 'objet', label: 'Objet' },
+        { key: 'cout', label: 'Coût HT' },
+        { key: 'subv', label: 'Subvention' },
+        { key: 'prog', label: 'Année' },
+        { key: 'etat', label: 'État' }
+      ], 'CPER');
+    }
+
+    const filters = document.createElement('div');
+    filters.className = 'invest-filters';
+    filters.innerHTML = `
+      <label>Commune :
+        <select id="f-commune">
+          <option value="">Toutes</option>
+          ${communesList.map(cm => `<option value="${cm}">${cm}</option>`).join('')}
+        </select>
+      </label>
+      <label>Domaine :
+        <select id="f-domaine">
+          <option value="">Tous</option>
+          ${domainesList.map(d => `<option value="${d}">${d}</option>`).join('')}
+        </select>
+      </label>
+      <label>Période :
+        <select id="f-periode">
+          <option value="">Toutes</option>
+          <option value="2011-2015">2011-2015</option>
+          <option value="2016-2020">2016-2020</option>
+          <option value="2021-2025">2021-2025</option>
+        </select>
+      </label>
+      <button class="btn-export" id="f-export">⬇️ Exporter CSV</button>
+      <span class="count">${all.length} / ${all.length} opérations</span>
+    `;
+    c.appendChild(filters);
+
+    filters.querySelector('#f-commune').addEventListener('change', e => {
+      state.commune = e.target.value; render();
+    });
+    filters.querySelector('#f-domaine').addEventListener('change', e => {
+      state.domaine = e.target.value; render();
+    });
+    filters.querySelector('#f-periode').addEventListener('change', e => {
+      state.periode = e.target.value; render();
+    });
+    filters.querySelector('#f-export').addEventListener('click', () => {
+      let data = all;
+      if (state.commune) data = data.filter(o => o.communes === state.commune);
+      if (state.domaine) data = data.filter(o => o.domaine === state.domaine);
+      if (state.periode){
+        const [min, max] = state.periode.split('-').map(Number);
+        data = data.filter(o => {
+          const y = parseInt(o.prog, 10);
+          return !isNaN(y) && y >= min && y <= max;
+        });
+      }
+
+      const cols = ['communes','domaine','objet','cout_ht','montant_de_la_subvention','prog','observations','cperma'];
+      const header = cols.join(',');
+      const lines = data.map(o =>
+        cols.map(k => {
+          let v = o[k] ?? '';
+          v = String(v).replace(/"/g, '""').replace(/\n/g, ' ');
+          return `"${v}"`;
+        }).join(',')
+      );
+      const csv = '\uFEFF' + header + '\n' + lines.join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `casud_investissements_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+    });
+
+    render();
+
+  } catch(e){
+    c.innerHTML = `<div class="error">Erreur investissements : ${e.message}</div>`;
+  }
+}
+
+async function moduleAbout(c){
+  renderCard(c, 'ℹ️ À propos du dashboard CASUD', `
+    <div style="font-family:var(--font-mono);font-size:12px;line-height:1.8">
+      <p style="color:var(--text-1);margin-bottom:14px">
+        Ce dashboard agrège les données publiques disponibles sur la
+        <strong>Communauté d'Agglomération du Sud (CASUD)</strong>.
+      </p>
+
+      <h4 style="color:var(--cyan);margin:14px 0 8px">🏛️ Communes membres</h4>
+      <ul style="color:var(--text-1);margin-left:20px">
+        <li>Saint-Joseph</li>
+        <li>Saint-Philippe</li>
+        <li>Le Tampon</li>
+        <li>Entre-Deux</li>
+        <li>Petite-Île</li>
+      </ul>
+
+      <h4 style="color:var(--cyan);margin:14px 0 8px">📊 Sources de données</h4>
+      <ul style="color:var(--text-1);margin-left:20px">
+        <li>GTFS CarSud — transport.data.gouv.fr</li>
+        <li>RPQS Déchets 2024 — casud.re</li>
+        <li>RPQS Eau Potable 2024 — casud.re</li>
+        <li>RPQS ANC 2024 — casud.re</li>
+        <li>RAD Transports 2023 — casud.re</li>
+        <li>ITI 2024 — casud.re</li>
+        <li>Budget 2024 — casud.re</li>
+        <li>BP Région 2020 — data.regionreunion.com</li>
+        <li>Opérations CPER — data.regionreunion.com</li>
+      </ul>
+
+      <h4 style="color:var(--cyan);margin:14px 0 8px">⚠️ Limites</h4>
+      <p style="color:var(--text-2);font-size:11px">
+        La CASUD ne dispose pas de portail Open Data dédié. Les données sont extraites
+        manuellement des rapports annuels officiels (PDF) et des APIs régionales.
+      </p>
+
+      <h4 style="color:var(--cyan);margin:14px 0 8px">🛠️ Stack technique</h4>
+      <ul style="color:var(--text-1);margin-left:20px">
+        <li>HTML5 + CSS3 + JavaScript ES6+</li>
+        <li>Chart.js 4.4 (graphiques)</li>
+        <li>Leaflet 1.9.4 + MarkerCluster (cartes)</li>
+        <li>Thème sombre "cyber"</li>
+      </ul>
+    </div>
+  `, 'info');
+}
+
+async function moduleAlertes(c){
+  c.innerHTML = `
+    <div class="subtabs" id="alertes-subtabs">
+      <button class="subtab active" data-subtab="all">🚨 Toutes</button>
+      <button class="subtab" data-subtab="invest">🏗️ Investissements</button>
+      <button class="subtab" data-subtab="habitat">🏘️ Habitat</button>
+      <button class="subtab" data-subtab="datasets">📊 Datasets</button>
+    </div>
+  `;
+  const tabs = c.querySelectorAll('#alertes-subtabs .subtab');
+  tabs.forEach(t => {
+    t.addEventListener('click', () => {
+      tabs.forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      renderAlertesTab(c, t.dataset.subtab);
+    });
+  });
+  renderAlertesTab(c, 'all');
+}
+
+async function renderAlertesTab(c, tab){
+  c.querySelectorAll(':scope > *:not(#alertes-subtabs)').forEach(el => el.remove());
+
+  const alerts = [];
+
+  // === 1. INVESTISSEMENTS : opérations non soldées ===
+  if (tab === 'all' || tab === 'invest'){
+    try {
+      const communes = ['Casud','Saint-Joseph','Saint-Philippe','Entre-Deux','Petite-Ile','Le Tampon'];
+      const where = communes.map(cm => `communes="${cm}"`).join(' OR ');
+      let all = [], offset = 0;
+      while (offset < 200) {
+        const url = `https://data.regionreunion.com/api/explore/v2.1/catalog/datasets/test_tcomhs/records?limit=100&offset=${offset}&where=${encodeURIComponent(where)}`;
+        const res = await fetch(url);
+        const json = await res.json();
+        const batch = json.results || [];
+        all = all.concat(batch);
+        if (batch.length < 100) break;
+        offset += 100;
+      }
+
+      // Opérations non soldées
+      const nonSoldees = all.filter(o => {
+        const obs = (o.observations || '').toLowerCase();
+        const hist = (o.historique || '').toLowerCase();
+        return !obs.includes('sold') && !hist.includes('sold');
+      });
+
+      // Opérations anciennes non soldées (avant 2018)
+      const anciennesNonSoldees = nonSoldees.filter(o => {
+        const y = parseInt(o.prog, 10);
+        return !isNaN(y) && y < 2018;
+      });
+
+      // Opérations avec déprogrammation
+      const deprogrammees = all.filter(o => {
+        const obs = (o.observations || '').toLowerCase() + ' ' + (o.historique || '').toLowerCase();
+        return obs.includes('déprogramm') || obs.includes('deprogramm');
+      });
+
+      // Opérations avec retard détecté
+      const enRetard = all.filter(o => {
+        const obs = (o.observations || '').toLowerCase();
+        return obs.includes('retard') || obs.includes('difficulté') || obs.includes('difficulte');
+      });
+
+      if (nonSoldees.length > 0){
+        alerts.push({
+          severity: 'warning',
+          icon: '⚠️',
+          title: `${nonSoldees.length} opérations non soldées`,
+          detail: `${anciennesNonSoldees.length} datent d'avant 2018 — vérifier l'avancement`,
+          module: 'investissements'
+        });
+      }
+
+      if (deprogrammees.length > 0){
+        alerts.push({
+          severity: 'critical',
+          icon: '🚫',
+          title: `${deprogrammees.length} opérations déprogrammées`,
+          detail: `Opérations CPER annulées ou reportées`,
+          module: 'investissements'
+        });
+      }
+
+      if (enRetard.length > 0){
+        alerts.push({
+          severity: 'warning',
+          icon: '⏱️',
+          title: `${enRetard.length} opérations en retard`,
+          detail: `Retards signalés dans les observations`,
+          module: 'investissements'
+        });
+      }
+
+      // Montrer 10 exemples
+      if (nonSoldees.length > 0){
+        let html = `<table><thead><tr>
+          <th>Commune</th><th>Objet</th><th>Année</th><th>État</th>
+        </tr></thead><tbody>`;
+        nonSoldees.slice(0, 10).forEach(o => {
+          html += `<tr>
+            <td>${o.communes || '—'}</td>
+            <td>${(o.objet || '—').substring(0, 50)}</td>
+            <td>${o.prog || '—'}</td>
+            <td style="color:var(--amber)">${(o.observations || '—').substring(0, 30)}</td>
+          </tr>`;
+        });
+        html += `</tbody></table>`;
+        renderCard(c, `⚠️ ${nonSoldees.length} opérations non soldées (10 exemples)`, html, 'CPER');
+      }
+
+    } catch(e){
+      console.warn('Erreur invest:', e);
+    }
+  }
+
+  // === 2. HABITAT : permis sans logements ===
+  if (tab === 'all' || tab === 'habitat'){
+    try {
+      const codes = ['97422', '97411', '97416', '97403', '97404'];
+      const where = codes.map(cm => `comm="${cm}"`).join(' OR ');
+
+      let all = [], offset = 0;
+      while (offset < 1000) {
+        const url = `https://data.regionreunion.com/api/explore/v2.1/catalog/datasets/liste-des-permis-de-construire-et-autres-autorisations-d-urbanisme-a-la-reunion/records?limit=100&offset=${offset}&where=${encodeURIComponent(where)}`;
+        const res = await fetch(url);
+        const json = await res.json();
+        const batch = json.results || [];
+        all = all.concat(batch);
+        if (batch.length < 100) break;
+        offset += 100;
+      }
+
+      // Permis sans logements créés
+      const sansLogements = all.filter(p => !p.nb_lgt_tot_crees || p.nb_lgt_tot_crees === 0);
+
+      // Permis avec grande surface mais peu de logements
+      const grandeSurface = all.filter(p => {
+        const surf = p.surf_hab_creee || 0;
+        const lgts = p.nb_lgt_tot_crees || 0;
+        return surf > 500 && lgts <= 1;
+      });
+
+      if (sansLogements.length > 0){
+        alerts.push({
+          severity: 'info',
+          icon: '🏘️',
+          title: `${sansLogements.length} permis sans logements créés`,
+          detail: `Extensions, annexes ou locaux non résidentiels`,
+          module: 'habitat'
+        });
+      }
+
+      if (grandeSurface.length > 0){
+        alerts.push({
+          severity: 'warning',
+          icon: '📐',
+          title: `${grandeSurface.length} permis avec grande surface (>500 m²)`,
+          detail: `Peu de logements créés — vérifier la destination`,
+          module: 'habitat'
+        });
+      }
+
+    } catch(e){
+      console.warn('Erreur habitat:', e);
+    }
+  }
+
+  // === 3. DATASETS : vides ou cassés ===
+  if (tab === 'all' || tab === 'datasets'){
+    const datasetsAVerifier = [
+      { id: 'meteo-des-decheteries', portal: 'tco', label: 'Météo déchèteries' },
+      { id: 'sites-mobiles-5g-a-la-reunion', portal: 'region', label: 'Sites 5G' },
+      { id: 'equipements-sportifs', portal: 'region', label: 'Équipements sportifs' }
+    ];
+
+    for (const ds of datasetsAVerifier){
+      try {
+        const base = ds.portal === 'tco' ? 'https://data.tco.re' : 'https://data.regionreunion.com';
+        const url = `${base}/api/explore/v2.1/catalog/datasets/${ds.id}/records?limit=1`;
+        const res = await fetch(url);
+        const json = await res.json();
+        const count = json.total_count || 0;
+
+        if (count === 0){
+          alerts.push({
+            severity: 'critical',
+            icon: '📊',
+            title: `Dataset vide : ${ds.label}`,
+            detail: `Source : ${ds.portal} — Aucune donnée publiée`,
+            module: 'datasets'
+          });
+        }
+      } catch(e){
+        alerts.push({
+          severity: 'critical',
+          icon: '❌',
+          title: `Dataset cassé : ${ds.label}`,
+          detail: `Source : ${ds.portal} — Erreur API`,
+          module: 'datasets'
+        });
+      }
+    }
+  }
+
+  // === AFFICHAGE ===
+  const criticals = alerts.filter(a => a.severity === 'critical').length;
+  const warnings = alerts.filter(a => a.severity === 'warning').length;
+  const infos = alerts.filter(a => a.severity === 'info').length;
+
+  renderKPI(c, { value: criticals, label: '🔴 Critiques', source: 'alertes' });
+  renderKPI(c, { value: warnings, label: '🟠 Avertissements', source: 'alertes' });
+  renderKPI(c, { value: infos, label: '🔵 Informations', source: 'alertes' });
+
+  if (alerts.length === 0){
+    renderCard(c, '✅ Aucune alerte', 
+      `<p style="color:var(--green);font-family:var(--font-mono);font-size:12px;padding:20px">
+        Tous les systèmes sont opérationnels.
+      </p>`, 'diagnostic');
+    return;
+  }
+
+  let html = '';
+  alerts.forEach(a => {
+    const bg = a.severity === 'critical' ? 'rgba(255,59,59,0.08)' 
+             : a.severity === 'warning' ? 'rgba(255,184,0,0.08)' 
+             : 'rgba(0,229,255,0.08)';
+    const borderColor = a.severity === 'critical' ? 'var(--red)' 
+                      : a.severity === 'warning' ? 'var(--amber)' 
+                      : 'var(--cyan)';
+
+    html += `<div style="background:${bg};border-left:3px solid ${borderColor};
+      padding:14px 16px;border-radius:6px;margin-bottom:8px;font-family:var(--font-mono);
+      cursor:pointer;" data-module="${a.module}">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">${a.icon}</span>
+        <div style="flex:1;">
+          <div style="font-weight:700;color:var(--text-0);font-size:13px;">${a.title}</div>
+          <div style="font-size:11px;color:var(--text-1);margin-top:4px;">${a.detail}</div>
+        </div>
+        <span style="color:${borderColor};font-size:10px;">→ ${a.module}</span>
+      </div>
+    </div>`;
+  });
+
+  const card = renderCard(c, `🚨 Alertes actives (${alerts.length})`, html, 'Diagnostic');
+
+  // Clic → ouvrir le module concerné
+  card.querySelectorAll('[data-module]').forEach(el => {
+    el.addEventListener('click', () => {
+      const mod = el.dataset.module;
+      if (mod === 'investissements' || mod === 'habitat' || mod === 'datasets'){
+        switchModule(mod === 'datasets' ? 'overview' : mod);
+      }
+    });
+  });
+}
+
+const MODULES = {overview:moduleOverview,alertes:moduleAlertes,transport:moduleTransport,dechets:moduleDechets,eau:moduleEau,habitat:moduleHabitat,energie:moduleEnergie,finances:moduleFinances,investissements:moduleInvestissements,about:moduleAbout};
+
+function buildNav(){
+  const nav = document.getElementById('tabs');
+  const list = document.getElementById('sbList');
+  nav.innerHTML = ''; list.innerHTML = '';
+  Object.keys(MODULES).forEach(key => {
+    const btn = document.createElement('button');
+    btn.className = 'tab';
+    btn.dataset.tab = key;
+    btn.innerHTML = `${ICONS[key]} ${LABELS[key]}`;
+    btn.addEventListener('click', () => switchModule(key));
+    nav.appendChild(btn);
+
+    const item = document.createElement('div');
+    item.className = 'sb-item';
+    item.dataset.module = key;
+    item.innerHTML = `<div class="sb-item-h"><span class="sb-item-icon">${ICONS[key]}</span><span class="sb-item-name">${LABELS[key]}</span></div>`;
+    item.addEventListener('click', () => switchModule(key));
+    list.appendChild(item);
+  });
+}
+
+async function switchModule(key){
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === key));
+  document.querySelectorAll('.sb-item').forEach(el => el.classList.toggle('active', el.dataset.module === key));
+
+  document.getElementById('activeIcon').textContent = ICONS[key];
+  document.getElementById('activeName').textContent = LABELS[key];
+  document.getElementById('ivName').textContent = LABELS[key];
+
+  Object.values(CHARTS).forEach(c => { try { c.destroy(); } catch(e){} });
+  Object.keys(CHARTS).forEach(k => delete CHARTS[k]);
+
+  const dash = DASH();
+  dash.innerHTML = '<div class="loader"><div class="spin"></div>Chargement…</div>';
+
+  await MODULES[key](dash);
+  const t = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('tbUpdate').textContent = t;
+  document.getElementById('sysUpdate').textContent = t;
+}
+
+async function init(){
+  try {
+    const res = await fetch('data/casud-data.json');
+    DATA = await res.json();
+    console.log('✅ Données CASUD chargées');
+  } catch(e){
+    console.warn('⚠️ Impossible de charger data/casud-data.json :', e.message);
+  }
+  buildNav();
+  switchModule('overview');
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
